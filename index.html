@@ -559,7 +559,7 @@
   function renderMetrics() {
     const total = LEADS_PERIODO.length;
     const qualificados = LEADS_PERIODO.filter(l => l.status === 'qualificado').length;
-    const vendas = LEADS_PERIODO.filter(l => l.comprou).length;
+    const vendas = LEADS_PERIODO.filter(l => l.venda_atribuida).length;
     const taxaQualif = total ? Math.round((qualificados / total) * 100) : 0;
     const taxaConv = qualificados ? Math.round((vendas / qualificados) * 100) : 0;
 
@@ -590,7 +590,7 @@
       if (!grupos[key]) grupos[key] = { campanha: camp, anuncio: content, origem: src, leads: 0, qualificados: 0, vendas: 0 };
       grupos[key].leads++;
       if (l.status === 'qualificado') grupos[key].qualificados++;
-      if (l.comprou) grupos[key].vendas++;
+      if (l.venda_atribuida) grupos[key].vendas++;
     });
 
     const linhas = Object.values(grupos).sort((a, b) => b.vendas - a.vendas || b.qualificados - a.qualificados);
@@ -713,7 +713,7 @@
     const headers = [
       'Nome', 'Empresa', 'CNPJ', 'WhatsApp', 'Segmento', 'Faixa de investimento',
       'Tabela sugerida', 'Conhece a marca', 'Status', 'Score', 'Classificação', 'Campanha', 'Anúncio', 'Origem',
-      'Mídia', 'Comprou', 'Vendedora', 'Observação da venda', 'Data do lead', 'Data da venda',
+      'Mídia', 'Comprou', 'Venda Atribuída a Esta Sessão', 'Vendedora', 'Observação da venda', 'Data do lead', 'Data da venda',
     ];
 
     const linhasCsv = linhas.map(l => [
@@ -726,6 +726,7 @@
       l.score, l.classificacao,
       l.utm_campaign, l.utm_content, l.utm_source, l.utm_medium,
       l.comprou ? 'Sim' : 'Não',
+      l.venda_atribuida ? 'Sim' : 'Não',
       l.vendedora_venda, l.observacao_venda,
       formatarData(l.created_at), formatarData(l.data_venda),
     ].map(csvField).join(','));
