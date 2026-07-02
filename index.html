@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard Revenda | Rigolim Hair and Co</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:        #FAF8F7;
+    --panel:     #FFFFFF;
+    --rose-pale: #F2EAE7;
+    --blush:     #D4A8A0;
+    --rose-txt:  #C47870;
+    --charcoal:  #1C1C1C;
+    --mid:       #6B6B6B;
+    --border:    #E8E0DD;
+    --success:   #1F8F5A;
+    --success-bg:#E7F5EE;
+    --warn:      #B8863E;
+    --warn-bg:   #FBF2E3;
+    --mono: 'JetBrains Mono', monospace;
+  }
+  * , *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--charcoal);
+    min-height: 100vh;
+  }
+
+  /* ── LOCK SCREEN ──────────────────────────────────────────── */
+  #lockScreen {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--charcoal);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 22px; padding: 24px;
+  }
+  #lockScreen h1 {
+    font-family: 'Playfair Display', serif; font-weight: 400; font-style: italic;
+    color: #F2EAE7; font-size: 1.6rem;
+  }
+  #lockForm { display: flex; gap: 10px; }
+  #lockInput {
+    background: #2A2A2A; border: 1.5px solid #444; border-radius: 8px;
+    padding: 13px 16px; color: #fff; font-family: var(--mono); font-size: 15px;
+    letter-spacing: 0.1em; outline: none; width: 200px;
+  }
+  #lockInput:focus { border-color: var(--blush); }
+  #lockBtn {
+    background: var(--rose-txt); color: #fff; border: none; border-radius: 8px;
+    padding: 13px 22px; font-weight: 500; font-size: 13px; letter-spacing: 0.06em;
+    text-transform: uppercase; cursor: pointer; transition: background .2s;
+  }
+  #lockBtn:hover { background: #B36861; }
+  #lockError { color: #E89B94; font-size: 12px; height: 14px; }
+
+  /* ── APP SHELL ────────────────────────────────────────────── */
+  #app { display: none; }
+  #app.visible { display: block; }
+
+  header.top {
+    background: var(--charcoal); padding: 18px 28px;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
+  header.top .brand {
+    font-family: 'Playfair Display', serif; font-style: italic; color: #F2EAE7; font-size: 1.25rem;
+  }
+  header.top .brand span { color: var(--blush); }
+  .top-actions { display: flex; align-items: center; gap: 10px; }
+  .btn-ghost {
+    background: transparent; border: 1px solid #444; color: #ccc;
+    border-radius: 7px; padding: 9px 14px; font-size: 12px; font-weight: 500;
+    letter-spacing: 0.04em; cursor: pointer; transition: all .2s; font-family: inherit;
+  }
+  .btn-ghost:hover { border-color: var(--blush); color: #fff; }
+  .updated-note { font-size: 11px; color: #888; font-family: var(--mono); }
+
+  main { max-width: 1180px; margin: 0 auto; padding: 28px 24px 60px; }
+
+  /* ── PERIOD BAR ───────────────────────────────────────────── */
+  .period-bar {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    margin-bottom: 20px; padding: 12px 16px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 12px;
+  }
+  .period-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+  .period-btn {
+    background: var(--rose-pale); border: 1px solid transparent; color: var(--charcoal);
+    border-radius: 100px; padding: 7px 14px; font-size: 12px; font-weight: 500;
+    font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s;
+  }
+  .period-btn:hover { background: #EDDFDB; }
+  .period-btn.active { background: var(--charcoal); color: #fff; }
+  .period-custom { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .date-input {
+    border: 1.5px solid var(--border); border-radius: 7px; padding: 7px 10px;
+    font-family: 'DM Sans', sans-serif; font-size: 12.5px; color: var(--charcoal);
+  }
+  .period-sep { font-size: 12px; color: var(--mid); }
+  .btn-apply {
+    background: var(--rose-txt); color: #fff; border: none; border-radius: 7px;
+    padding: 7px 14px; font-size: 12px; font-weight: 500; cursor: pointer; transition: background .2s;
+  }
+  .btn-apply:hover { background: #B36861; }
+  .period-count { margin-left: auto; font-size: 12px; color: var(--mid); }
+
+  /* ── METRIC CARDS ─────────────────────────────────────────── */
+  .metrics-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px; margin-bottom: 28px;
+  }
+  .metric-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px 20px;
+  }
+  .metric-label {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--mid); margin-bottom: 8px;
+  }
+  .metric-value {
+    font-family: 'Playfair Display', serif; font-size: 2rem; color: var(--charcoal); line-height: 1;
+  }
+  .metric-value.accent { color: var(--rose-txt); }
+  .metric-value.good { color: var(--success); }
+  .metric-sub { font-size: 11px; color: var(--mid); margin-top: 6px; }
+
+  /* ── SECTION ──────────────────────────────────────────────── */
+  .section { margin-bottom: 28px; }
+  .section-head {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;
+  }
+  .section-head h2 {
+    font-family: 'Playfair Display', serif; font-weight: 400; font-size: 1.25rem;
+  }
+  .section-head .hint { font-size: 12px; color: var(--mid); }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+  }
+
+  /* ── CAMPAIGN TABLE ───────────────────────────────────────── */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    text-align: left; padding: 10px 16px; font-size: 10px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--mid);
+    background: var(--rose-pale); border-bottom: 1px solid var(--border);
+  }
+  tbody td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #FCFAF9; }
+  td.num, th.num { text-align: right; font-family: var(--mono); }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: 100px;
+    letter-spacing: 0.03em;
+  }
+  .badge-qualificado { background: var(--success-bg); color: var(--success); }
+  .badge-nao_qualificado { background: #F0EEED; color: var(--mid); }
+
+  /* ── LEADS TABLE / SEARCH ─────────────────────────────────── */
+  .search-row {
+    display: flex; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--border);
+    background: var(--panel); flex-wrap: wrap;
+  }
+  .search-input {
+    flex: 1; min-width: 200px; border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; font-family: 'DM Sans', sans-serif; font-size: 13.5px; outline: none;
+  }
+  .search-input:focus { border-color: var(--blush); }
+  select.filter-select {
+    border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 12px;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; background: #fff; color: var(--charcoal);
+  }
+
+  .btn-vender {
+    background: var(--charcoal); color: #fff; border: none; border-radius: 7px;
+    padding: 7px 12px; font-size: 11.5px; font-weight: 500; letter-spacing: 0.02em;
+    cursor: pointer; white-space: nowrap; transition: background .2s;
+  }
+  .btn-vender:hover { background: #333; }
+  .btn-vender:disabled { background: var(--success); cursor: default; opacity: .9; }
+
+  .lead-name { font-weight: 500; }
+  .lead-sub { font-size: 11px; color: var(--mid); margin-top: 2px; }
+  .phone-mono { font-family: var(--mono); font-size: 12.5px; }
+
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--mid); font-size: 13px; }
+
+  /* ── MODAL (marcar venda) ─────────────────────────────────── */
+  #vendaModal {
+    position: fixed; inset: 0; z-index: 5000; background: rgba(28,28,28,.5);
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  #vendaModal.show { display: flex; }
+  .modal-box {
+    background: #fff; border-radius: 14px; padding: 28px; max-width: 380px; width: 100%;
+  }
+  .modal-box h3 { font-family: 'Playfair Display', serif; font-size: 1.3rem; margin-bottom: 6px; }
+  .modal-box p { font-size: 13px; color: var(--mid); margin-bottom: 18px; }
+  .modal-box label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mid); display: block; margin-bottom: 6px; }
+  .modal-box textarea {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 12px;
+    font-family: 'DM Sans', sans-serif; font-size: 13.5px; resize: vertical; min-height: 60px; margin-bottom: 18px; outline: none;
+  }
+  .modal-box textarea:focus { border-color: var(--blush); }
+  .modal-actions { display: flex; gap: 10px; }
+  .modal-actions button {
+    flex: 1; padding: 12px; border-radius: 8px; border: none; font-size: 12.5px;
+    font-weight: 500; letter-spacing: 0.04em; cursor: pointer; text-transform: uppercase;
+  }
+  .modal-cancel { background: var(--rose-pale); color: var(--charcoal); }
+  .modal-confirm { background: var(--success); color: #fff; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(120px);
+    background: var(--charcoal); color: #fff; font-size: 13px; padding: 12px 22px;
+    border-radius: 100px; box-shadow: 0 6px 28px rgba(0,0,0,.2); transition: transform .35s cubic-bezier(.34,1.56,.64,1);
+    z-index: 9998; white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 640px) {
+    main { padding: 20px 14px 50px; }
+    thead { display: none; }
+    tbody tr { display: block; border-bottom: 1px solid var(--border); padding: 12px 14px; }
+    tbody td { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border: none; }
+    tbody td::before { content: attr(data-label); font-size: 10px; text-transform: uppercase; color: var(--mid); font-weight: 600; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── LOCK SCREEN ──────────────────────────────────────────── -->
+<div id="lockScreen">
+  <h1>Dashboard Revenda <span style="color:#D4A8A0">·</span> Rigolim</h1>
+  <form id="lockForm">
+    <input type="password" id="lockInput" placeholder="Senha de acesso" autocomplete="off" />
+    <button type="submit" id="lockBtn">Entrar</button>
+  </form>
+  <div id="lockError"></div>
+</div>
+
+<!-- ── APP ───────────────────────────────────────────────────── -->
+<div id="app">
+  <header class="top">
+    <div class="brand">Dashboard <span>Revenda</span></div>
+    <div class="top-actions">
+      <span class="updated-note" id="updatedNote"></span>
+      <button class="btn-ghost" id="btnRefresh">Atualizar</button>
+      <button class="btn-ghost" id="btnLogout">Sair</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- PERÍODO -->
+    <div class="period-bar">
+      <div class="period-buttons" id="periodButtons">
+        <button class="period-btn" data-period="hoje">Hoje</button>
+        <button class="period-btn" data-period="7d">7 dias</button>
+        <button class="period-btn" data-period="30d">30 dias</button>
+        <button class="period-btn active" data-period="tudo">Tudo</button>
+        <button class="period-btn" data-period="custom">Personalizado</button>
+      </div>
+      <div class="period-custom" id="periodCustom" style="display:none;">
+        <input type="date" id="dataInicio" class="date-input" />
+        <span class="period-sep">até</span>
+        <input type="date" id="dataFim" class="date-input" />
+        <button class="btn-apply" id="btnAplicarPeriodo">Aplicar</button>
+      </div>
+      <span class="period-count" id="periodCount"></span>
+    </div>
+
+    <!-- METRICS -->
+    <div class="metrics-grid" id="metricsGrid"></div>
+
+    <!-- CAMPANHAS -->
+    <div class="section">
+      <div class="section-head">
+        <h2>Leads e vendas por campanha</h2>
+        <span class="hint">Cruza os leads captados com as vendas confirmadas</span>
+      </div>
+      <div class="panel" style="overflow-x:auto;">
+        <table id="campaignTable">
+          <thead>
+            <tr>
+              <th>Campanha</th>
+              <th>Origem</th>
+              <th class="num">Leads</th>
+              <th class="num">Qualificados</th>
+              <th class="num">Vendas</th>
+              <th class="num">Conversão</th>
+            </tr>
+          </thead>
+          <tbody id="campaignTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- LEADS -->
+    <div class="section">
+      <div class="section-head">
+        <h2>Leads</h2>
+        <span class="hint">Busca pelo telefone e marca quem virou cliente</span>
+      </div>
+      <div class="panel">
+        <div class="search-row">
+          <input type="text" id="searchInput" class="search-input" placeholder="Buscar por nome, empresa ou telefone..." />
+          <select id="statusFilter" class="filter-select">
+            <option value="">Todos os status</option>
+            <option value="qualificado">Qualificado</option>
+            <option value="nao_qualificado">Não qualificado</option>
+          </select>
+          <select id="vendaFilter" class="filter-select">
+            <option value="">Vendas: todas</option>
+            <option value="sim">Só quem comprou</option>
+            <option value="nao">Só quem não comprou</option>
+          </select>
+        </div>
+        <div style="overflow-x:auto;">
+          <table id="leadsTable">
+            <thead>
+              <tr>
+                <th>Lead</th>
+                <th>Telefone</th>
+                <th>Segmento</th>
+                <th>Status</th>
+                <th>Campanha</th>
+                <th>Data</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="leadsTbody"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="emptyState" style="display:none;">Nenhum lead encontrado com esse filtro.</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ── MODAL: marcar venda ─────────────────────────────────────── -->
+<div id="vendaModal">
+  <div class="modal-box">
+    <h3>Marcar como vendido</h3>
+    <p id="vendaModalNome"></p>
+    <label for="vendedoraInput">Seu nome (vendedora)</label>
+    <input id="vendedoraInput" class="search-input" style="width:100%; margin-bottom:14px;" placeholder="Ex: Ana" />
+    <label for="obsInput">Observação (opcional)</label>
+    <textarea id="obsInput" placeholder="Ex: fechou tabela Ouro, primeiro pedido R$3.200"></textarea>
+    <div class="modal-actions">
+      <button class="modal-cancel" id="btnCancelVenda">Cancelar</button>
+      <button class="modal-confirm" id="btnConfirmVenda">Confirmar venda</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  /* ══════════════════════════════════════════════════════════
+     CONFIGURAÇÃO
+  ══════════════════════════════════════════════════════════ */
+  const SUPABASE_URL  = 'https://gkbjqnaqqppxfegzikwd.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdrYmpxbmFxcXBweGZlZ3ppa3dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MzU0ODIsImV4cCI6MjA5MDExMTQ4Mn0.cJHIFufqocC85sonF-sKap1UroN_eztdvwxXrojkd-Q';
+  const AUTH_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/dashboard-auth`;
+  const VIEW_LEADS = 'leads_com_vendas';
+  const TABLE_VENDAS = 'vendas_confirmadas';
+
+  // ── LOCK SCREEN ──────────────────────────────────────────────
+  // A senha em si NUNCA fica no código do site — ela mora numa tabela protegida
+  // no Supabase, e só a Edge Function "dashboard-auth" (rodando no servidor)
+  // consegue lê-la. Aqui só mandamos o que a pessoa digitou e recebemos sim/não.
+  const SESSION_KEY = 'rigolim_dash_unlocked';
+  function unlockApp() {
+    document.getElementById('lockScreen').style.display = 'none';
+    document.getElementById('app').classList.add('visible');
+    carregarDados();
+  }
+  if (sessionStorage.getItem(SESSION_KEY) === '1') unlockApp();
+
+  document.getElementById('lockForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const val = document.getElementById('lockInput').value;
+    const btn = document.getElementById('lockBtn');
+    const errorEl = document.getElementById('lockError');
+    errorEl.textContent = '';
+    btn.disabled = true;
+    btn.textContent = 'Verificando...';
+
+    try {
+      const res = await fetch(AUTH_FUNCTION_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON,
+          'Authorization': `Bearer ${SUPABASE_ANON}`,
+        },
+        body: JSON.stringify({ password: val }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.ok) {
+        sessionStorage.setItem(SESSION_KEY, '1');
+        unlockApp();
+      } else {
+        errorEl.textContent = 'Senha incorreta.';
+        document.getElementById('lockInput').value = '';
+      }
+    } catch (err) {
+      console.error(err);
+      errorEl.textContent = 'Não foi possível verificar a senha. Tente de novo.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+    }
+  });
+
+  document.getElementById('btnLogout').addEventListener('click', () => {
+    sessionStorage.removeItem(SESSION_KEY);
+    location.reload();
+  });
+
+  // ── TOAST ────────────────────────────────────────────────────
+  function showToast(msg, ms = 3500) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), ms);
+  }
+
+  // ── DATA ─────────────────────────────────────────────────────
+  let LEADS = [];
+  let LEADS_PERIODO = []; // LEADS já filtrado pelo período selecionado
+  let periodoAtivo = 'tudo';
+  let periodoInicio = null; // Date | null
+  let periodoFim = null;    // Date | null
+
+  async function fetchLeads() {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${VIEW_LEADS}?select=*&order=created_at.desc`, {
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` },
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  async function carregarDados() {
+    try {
+      LEADS = await fetchLeads();
+      document.getElementById('updatedNote').textContent = `Atualizado às ${new Date().toLocaleTimeString('pt-BR')}`;
+      aplicarPeriodo();
+    } catch (err) {
+      console.error(err);
+      showToast('Não foi possível carregar os leads. Veja o console para detalhes.', 5000);
+    }
+  }
+
+  document.getElementById('btnRefresh').addEventListener('click', carregarDados);
+
+  // ── PERÍODO ──────────────────────────────────────────────────
+  function inicioDoDia(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+  function fimDoDia(d) { const x = new Date(d); x.setHours(23, 59, 59, 999); return x; }
+
+  function calcularIntervalo(periodo) {
+    const hoje = new Date();
+    if (periodo === 'hoje') return [inicioDoDia(hoje), fimDoDia(hoje)];
+    if (periodo === '7d') { const ini = new Date(hoje); ini.setDate(ini.getDate() - 6); return [inicioDoDia(ini), fimDoDia(hoje)]; }
+    if (periodo === '30d') { const ini = new Date(hoje); ini.setDate(ini.getDate() - 29); return [inicioDoDia(ini), fimDoDia(hoje)]; }
+    return [null, null]; // 'tudo'
+  }
+
+  function aplicarPeriodo() {
+    if (periodoAtivo === 'custom') {
+      // periodoInicio/periodoFim já setados pelo botão "Aplicar"
+    } else {
+      const [ini, fim] = calcularIntervalo(periodoAtivo);
+      periodoInicio = ini;
+      periodoFim = fim;
+    }
+
+    LEADS_PERIODO = (!periodoInicio && !periodoFim)
+      ? LEADS
+      : LEADS.filter(l => {
+          if (!l.created_at) return false;
+          const d = new Date(l.created_at);
+          if (periodoInicio && d < periodoInicio) return false;
+          if (periodoFim && d > periodoFim) return false;
+          return true;
+        });
+
+    document.getElementById('periodCount').textContent =
+      `${LEADS_PERIODO.length} lead${LEADS_PERIODO.length === 1 ? '' : 's'} no período`;
+
+    renderMetrics();
+    renderCampaignTable();
+    renderLeadsTable();
+  }
+
+  document.getElementById('periodButtons').addEventListener('click', (e) => {
+    const btn = e.target.closest('.period-btn');
+    if (!btn) return;
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    periodoAtivo = btn.dataset.period;
+    document.getElementById('periodCustom').style.display = periodoAtivo === 'custom' ? 'flex' : 'none';
+    if (periodoAtivo !== 'custom') aplicarPeriodo();
+  });
+
+  document.getElementById('btnAplicarPeriodo').addEventListener('click', () => {
+    const iniVal = document.getElementById('dataInicio').value;
+    const fimVal = document.getElementById('dataFim').value;
+    if (!iniVal && !fimVal) { showToast('Escolha ao menos uma data.'); return; }
+    periodoInicio = iniVal ? inicioDoDia(new Date(iniVal + 'T00:00:00')) : null;
+    periodoFim = fimVal ? fimDoDia(new Date(fimVal + 'T00:00:00')) : null;
+    aplicarPeriodo();
+  });
+
+  // ── METRICS ──────────────────────────────────────────────────
+  function renderMetrics() {
+    const total = LEADS_PERIODO.length;
+    const qualificados = LEADS_PERIODO.filter(l => l.status === 'qualificado').length;
+    const vendas = LEADS_PERIODO.filter(l => l.comprou).length;
+    const taxaQualif = total ? Math.round((qualificados / total) * 100) : 0;
+    const taxaConv = qualificados ? Math.round((vendas / qualificados) * 100) : 0;
+
+    const cards = [
+      { label: 'Total de leads', value: total, cls: '' },
+      { label: 'Qualificados', value: qualificados, cls: 'accent', sub: `${taxaQualif}% do total` },
+      { label: 'Vendas confirmadas', value: vendas, cls: 'good', sub: `${taxaConv}% dos qualificados` },
+      { label: 'Não qualificados', value: total - qualificados, cls: '' },
+    ];
+
+    document.getElementById('metricsGrid').innerHTML = cards.map(c => `
+      <div class="metric-card">
+        <div class="metric-label">${c.label}</div>
+        <div class="metric-value ${c.cls}">${c.value}</div>
+        ${c.sub ? `<div class="metric-sub">${c.sub}</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  // ── CAMPAIGN TABLE ───────────────────────────────────────────
+  function renderCampaignTable() {
+    const grupos = {};
+    LEADS_PERIODO.forEach(l => {
+      const camp = l.utm_campaign || 'Sem campanha';
+      const src = l.utm_source || '—';
+      const key = camp + '|' + src;
+      if (!grupos[key]) grupos[key] = { campanha: camp, origem: src, leads: 0, qualificados: 0, vendas: 0 };
+      grupos[key].leads++;
+      if (l.status === 'qualificado') grupos[key].qualificados++;
+      if (l.comprou) grupos[key].vendas++;
+    });
+
+    const linhas = Object.values(grupos).sort((a, b) => b.vendas - a.vendas || b.qualificados - a.qualificados);
+
+    if (!linhas.length) {
+      document.getElementById('campaignTbody').innerHTML = `<tr><td colspan="6" class="empty-state">Nenhum dado ainda.</td></tr>`;
+      return;
+    }
+
+    document.getElementById('campaignTbody').innerHTML = linhas.map(g => {
+      const conv = g.qualificados ? Math.round((g.vendas / g.qualificados) * 100) : 0;
+      return `
+        <tr>
+          <td>${g.campanha}</td>
+          <td>${g.origem}</td>
+          <td class="num">${g.leads}</td>
+          <td class="num">${g.qualificados}</td>
+          <td class="num">${g.vendas}</td>
+          <td class="num">${conv}%</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // ── LEADS TABLE ──────────────────────────────────────────────
+  function statusBadge(status) {
+    const label = status === 'qualificado' ? 'Qualificado' : 'Não qualificado';
+    return `<span class="badge badge-${status}">${label}</span>`;
+  }
+
+  function leadsFiltrados() {
+    const q = document.getElementById('searchInput').value.trim().toLowerCase();
+    const qDigits = q.replace(/\D/g, '');
+    const statusF = document.getElementById('statusFilter').value;
+    const vendaF = document.getElementById('vendaFilter').value;
+
+    return LEADS_PERIODO.filter(l => {
+      if (statusF && l.status !== statusF) return false;
+      if (vendaF === 'sim' && !l.comprou) return false;
+      if (vendaF === 'nao' && l.comprou) return false;
+      if (q) {
+        const nome = (l.nome || '').toLowerCase();
+        const empresa = (l.empresa || '').toLowerCase();
+        const tel = (l.whatsapp || '').replace(/\D/g, '');
+        const bate = nome.includes(q) || empresa.includes(q) || (qDigits && tel.includes(qDigits));
+        if (!bate) return false;
+      }
+      return true;
+    });
+  }
+
+  function formatarData(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderLeadsTable() {
+    const linhas = leadsFiltrados();
+    const tbody = document.getElementById('leadsTbody');
+    const empty = document.getElementById('emptyState');
+
+    if (!linhas.length) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    tbody.innerHTML = linhas.map(l => `
+      <tr>
+        <td data-label="Lead">
+          <div class="lead-name">${l.nome || '—'}</div>
+          <div class="lead-sub">${l.empresa || ''}</div>
+        </td>
+        <td data-label="Telefone" class="phone-mono">${l.whatsapp || '—'}</td>
+        <td data-label="Segmento">${l.segmento || '—'}</td>
+        <td data-label="Status">${statusBadge(l.status)}</td>
+        <td data-label="Campanha">${l.utm_campaign || '—'}</td>
+        <td data-label="Data">${formatarData(l.created_at)}</td>
+        <td data-label="">
+          ${l.comprou
+            ? `<button class="btn-vender" disabled>✓ Vendido</button>`
+            : `<button class="btn-vender" data-tel="${l.whatsapp || ''}" data-nome="${(l.nome || '').replace(/"/g,'&quot;')}" onclick="abrirModalVenda(this)">Marcar como vendido</button>`
+          }
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  document.getElementById('searchInput').addEventListener('input', renderLeadsTable);
+  document.getElementById('statusFilter').addEventListener('change', renderLeadsTable);
+  document.getElementById('vendaFilter').addEventListener('change', renderLeadsTable);
+
+  // ── MODAL: marcar venda ─────────────────────────────────────
+  let vendaAtual = null;
+
+  function abrirModalVenda(btn) {
+    vendaAtual = { telefone: btn.dataset.tel, nome: btn.dataset.nome };
+    document.getElementById('vendaModalNome').textContent = `${vendaAtual.nome} · ${vendaAtual.telefone}`;
+    document.getElementById('vendedoraInput').value = localStorage.getItem('rigolim_vendedora_nome') || '';
+    document.getElementById('obsInput').value = '';
+    document.getElementById('vendaModal').classList.add('show');
+  }
+
+  document.getElementById('btnCancelVenda').addEventListener('click', () => {
+    document.getElementById('vendaModal').classList.remove('show');
+    vendaAtual = null;
+  });
+
+  document.getElementById('btnConfirmVenda').addEventListener('click', async () => {
+    if (!vendaAtual) return;
+    const vendedora = document.getElementById('vendedoraInput').value.trim();
+    const observacao = document.getElementById('obsInput').value.trim();
+    const btn = document.getElementById('btnConfirmVenda');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+
+    try {
+      if (vendedora) localStorage.setItem('rigolim_vendedora_nome', vendedora);
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE_VENDAS}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON,
+          'Authorization': `Bearer ${SUPABASE_ANON}`,
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({
+          telefone: vendaAtual.telefone,
+          vendedora: vendedora || null,
+          observacao: observacao || null,
+        }),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        // Telefone já marcado como vendido (índice único) — trata como aviso, não erro
+        if (errText.includes('duplicate') || errText.includes('unique')) {
+          showToast('Esse telefone já estava marcado como vendido.');
+        } else {
+          throw new Error(errText);
+        }
+      } else {
+        showToast('Venda confirmada com sucesso!');
+      }
+      document.getElementById('vendaModal').classList.remove('show');
+      vendaAtual = null;
+      await carregarDados();
+    } catch (err) {
+      console.error(err);
+      showToast('Não foi possível salvar a venda. Tente de novo.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Confirmar venda';
+    }
+  });
+</script>
+
+</body>
+</html>
