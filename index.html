@@ -161,6 +161,9 @@
   }
   .badge-qualificado { background: var(--success-bg); color: var(--success); }
   .badge-nao_qualificado { background: #F0EEED; color: var(--mid); }
+  .badge-quente { background: #FCE4E1; color: #B5453A; }
+  .badge-morno { background: var(--warn-bg); color: var(--warn); }
+  .badge-frio { background: #E9EEF2; color: #5C7080; }
 
   /* ── LEADS TABLE / SEARCH ─────────────────────────────────── */
   .search-row {
@@ -176,6 +179,12 @@
     border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 12px;
     font-family: 'DM Sans', sans-serif; font-size: 13px; background: #fff; color: var(--charcoal);
   }
+  .btn-csv {
+    background: var(--charcoal); color: #fff; border: none; border-radius: 8px;
+    padding: 10px 16px; font-size: 12.5px; font-weight: 500; letter-spacing: 0.02em;
+    cursor: pointer; white-space: nowrap; transition: background .2s; font-family: 'DM Sans', sans-serif;
+  }
+  .btn-csv:hover { background: #333; }
 
   .btn-vender {
     background: var(--charcoal); color: #fff; border: none; border-radius: 7px;
@@ -320,14 +329,20 @@
             <option value="sim">Só quem comprou</option>
             <option value="nao">Só quem não comprou</option>
           </select>
+          <button class="btn-csv" id="btnExportCsv">⬇ Baixar CSV</button>
         </div>
         <div style="overflow-x:auto;">
           <table id="leadsTable">
             <thead>
               <tr>
                 <th>Lead</th>
+                <th>CNPJ</th>
                 <th>Telefone</th>
                 <th>Segmento</th>
+                <th>Faixa de Valor</th>
+                <th>Tabela Sugerida</th>
+                <th>Conhece a Marca</th>
+                <th>Classificação</th>
                 <th>Status</th>
                 <th>Campanha</th>
                 <th>Data</th>
@@ -370,6 +385,26 @@
   const AUTH_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/dashboard-auth`;
   const VIEW_LEADS = 'leads_com_vendas';
   const TABLE_VENDAS = 'vendas_confirmadas';
+
+  // Mesmos rótulos usados no quiz da LP, pra exportar o CSV de forma legível
+  const SEGMENTO_LABELS = {
+    distribuidor: 'Loja física - distribuidor',
+    cosmeticos:   'Loja física - cosméticos / produtos de beleza',
+    marketplace:  'Marketplace',
+    ecommerce:    'E-commerce próprio',
+    misto:        'Misto (loja física + online)',
+  };
+  const VALOR_LABELS = {
+    '1800-2499':   'R$ 1.800 a R$ 2.499',
+    '2500-4999':   'R$ 2.500 a R$ 4.999',
+    '5000+':       'A partir de R$ 5.000',
+    'abaixo-1800': 'Menos de R$ 1.800',
+  };
+  const MARCA_LABELS = {
+    ja_compro:     'Já compra a Rigolim',
+    ja_ouvi:       'Já ouviu falar, nunca comprou',
+    nao_conhecia:  'Não conhecia a marca',
+  };
 
   // ── LOCK SCREEN ──────────────────────────────────────────────
   // A senha em si NUNCA fica no código do site — ela mora numa tabela protegida
@@ -584,6 +619,12 @@
     return `<span class="badge badge-${status}">${label}</span>`;
   }
 
+  function classificacaoBadge(classificacao) {
+    if (!classificacao) return '—';
+    const labels = { quente: 'Quente', morno: 'Morno', frio: 'Frio' };
+    return `<span class="badge badge-${classificacao}">${labels[classificacao] || classificacao}</span>`;
+  }
+
   function leadsFiltrados() {
     const q = document.getElementById('searchInput').value.trim().toLowerCase();
     const qDigits = q.replace(/\D/g, '');
@@ -629,8 +670,13 @@
           <div class="lead-name">${l.nome || '—'}</div>
           <div class="lead-sub">${l.empresa || ''}</div>
         </td>
+        <td data-label="CNPJ" class="phone-mono">${l.cnpj || '—'}</td>
         <td data-label="Telefone" class="phone-mono">${l.whatsapp || '—'}</td>
         <td data-label="Segmento">${l.segmento || '—'}</td>
+        <td data-label="Faixa de Valor">${VALOR_LABELS[l.faixa_valor] || l.faixa_valor || '—'}</td>
+        <td data-label="Tabela Sugerida">${l.tabela_sugerida || '—'}</td>
+        <td data-label="Conhece a Marca">${MARCA_LABELS[l.conhece_marca] || l.conhece_marca || '—'}</td>
+        <td data-label="Classificação">${classificacaoBadge(l.classificacao)}</td>
         <td data-label="Status">${statusBadge(l.status)}</td>
         <td data-label="Campanha">${l.utm_campaign || '—'}</td>
         <td data-label="Data">${formatarData(l.created_at)}</td>
@@ -647,6 +693,58 @@
   document.getElementById('searchInput').addEventListener('input', renderLeadsTable);
   document.getElementById('statusFilter').addEventListener('change', renderLeadsTable);
   document.getElementById('vendaFilter').addEventListener('change', renderLeadsTable);
+
+  // ── EXPORTAR CSV ─────────────────────────────────────────────
+  // Exporta exatamente os leads que estão na tela (respeita busca, status,
+  // filtro de venda E o período selecionado no topo, porque leadsFiltrados()
+  // já parte de LEADS_PERIODO).
+  function csvField(v) {
+    const s = (v === null || v === undefined) ? '' : String(v);
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+
+  function exportarCSV() {
+    const linhas = leadsFiltrados();
+    if (!linhas.length) { showToast('Nenhum lead pra exportar com esse filtro.'); return; }
+
+    const headers = [
+      'Nome', 'Empresa', 'CNPJ', 'WhatsApp', 'Segmento', 'Faixa de investimento',
+      'Tabela sugerida', 'Conhece a marca', 'Status', 'Score', 'Classificação', 'Campanha', 'Origem',
+      'Mídia', 'Comprou', 'Vendedora', 'Observação da venda', 'Data do lead', 'Data da venda',
+    ];
+
+    const linhasCsv = linhas.map(l => [
+      l.nome, l.empresa, l.cnpj, l.whatsapp,
+      SEGMENTO_LABELS[l.segmento] || l.segmento,
+      VALOR_LABELS[l.faixa_valor] || l.faixa_valor,
+      l.tabela_sugerida,
+      MARCA_LABELS[l.conhece_marca] || l.conhece_marca,
+      l.status === 'qualificado' ? 'Qualificado' : 'Não qualificado',
+      l.score, l.classificacao,
+      l.utm_campaign, l.utm_source, l.utm_medium,
+      l.comprou ? 'Sim' : 'Não',
+      l.vendedora_venda, l.observacao_venda,
+      formatarData(l.created_at), formatarData(l.data_venda),
+    ].map(csvField).join(','));
+
+    // BOM no início garante que o Excel (Windows) abra os acentos certinho
+    const csvContent = '\uFEFF' + headers.map(csvField).join(',') + '\n' + linhasCsv.join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const hoje = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `leads_rigolim_revenda_${hoje}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast(`${linhas.length} lead${linhas.length === 1 ? '' : 's'} exportado${linhas.length === 1 ? '' : 's'}.`);
+  }
+
+  document.getElementById('btnExportCsv').addEventListener('click', exportarCSV);
 
   // ── MODAL: marcar venda ─────────────────────────────────────
   let vendaAtual = null;
