@@ -298,6 +298,7 @@
           <thead>
             <tr>
               <th>Campanha</th>
+              <th>Anúncio</th>
               <th>Origem</th>
               <th class="num">Leads</th>
               <th class="num">Qualificados</th>
@@ -583,9 +584,10 @@
     const grupos = {};
     LEADS_PERIODO.forEach(l => {
       const camp = l.utm_campaign || 'Sem campanha';
+      const content = l.utm_content || '—';
       const src = l.utm_source || '—';
-      const key = camp + '|' + src;
-      if (!grupos[key]) grupos[key] = { campanha: camp, origem: src, leads: 0, qualificados: 0, vendas: 0 };
+      const key = camp + '|' + content + '|' + src;
+      if (!grupos[key]) grupos[key] = { campanha: camp, anuncio: content, origem: src, leads: 0, qualificados: 0, vendas: 0 };
       grupos[key].leads++;
       if (l.status === 'qualificado') grupos[key].qualificados++;
       if (l.comprou) grupos[key].vendas++;
@@ -594,7 +596,7 @@
     const linhas = Object.values(grupos).sort((a, b) => b.vendas - a.vendas || b.qualificados - a.qualificados);
 
     if (!linhas.length) {
-      document.getElementById('campaignTbody').innerHTML = `<tr><td colspan="6" class="empty-state">Nenhum dado ainda.</td></tr>`;
+      document.getElementById('campaignTbody').innerHTML = `<tr><td colspan="7" class="empty-state">Nenhum dado ainda.</td></tr>`;
       return;
     }
 
@@ -603,6 +605,7 @@
       return `
         <tr>
           <td>${g.campanha}</td>
+          <td>${g.anuncio}</td>
           <td>${g.origem}</td>
           <td class="num">${g.leads}</td>
           <td class="num">${g.qualificados}</td>
@@ -709,7 +712,7 @@
 
     const headers = [
       'Nome', 'Empresa', 'CNPJ', 'WhatsApp', 'Segmento', 'Faixa de investimento',
-      'Tabela sugerida', 'Conhece a marca', 'Status', 'Score', 'Classificação', 'Campanha', 'Origem',
+      'Tabela sugerida', 'Conhece a marca', 'Status', 'Score', 'Classificação', 'Campanha', 'Anúncio', 'Origem',
       'Mídia', 'Comprou', 'Vendedora', 'Observação da venda', 'Data do lead', 'Data da venda',
     ];
 
@@ -721,7 +724,7 @@
       MARCA_LABELS[l.conhece_marca] || l.conhece_marca,
       l.status === 'qualificado' ? 'Qualificado' : 'Não qualificado',
       l.score, l.classificacao,
-      l.utm_campaign, l.utm_source, l.utm_medium,
+      l.utm_campaign, l.utm_content, l.utm_source, l.utm_medium,
       l.comprou ? 'Sim' : 'Não',
       l.vendedora_venda, l.observacao_venda,
       formatarData(l.created_at), formatarData(l.data_venda),
